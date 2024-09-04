@@ -23,8 +23,10 @@ def create_server_connection():
             database='practise'
         )
         print("MySQL Database connection successful")
-    except:
-        print(f"Error: ")
+    except mysql.connector.Error as err: 
+        print(f"Error: {err}")
+    except Exception as e:
+        print(f"Unexpected Error: {e}")
     return connection
 
 
@@ -35,6 +37,21 @@ def welcome():
     return "Welcome to Akash Sen"
 
 # Define the /getuser route
+@app.route("/getuser", methods=['GET'])
+def get_user():
+    connection = create_server_connection()
+    username=request.args.get('username')
+    # print(username,"username")
+    cursor = connection.cursor(dictionary=True)
+
+    query = "SELECT * FROM users WHERE username = %s"
+    cursor.execute(query, (username,))
+    users = cursor.fetchall()
+
+    cursor.close()
+    connection.close()
+
+    return jsonify(users)    
 
 @app.route('/signup', methods=['POST'])
 def signup():
@@ -109,7 +126,35 @@ def send_email():
     print(response.headers)
 
 
-@app.route('/product', methods=['GET'])
+@app.route('/addproduct', methods=['POST'])
+def addproduct():
+    try:
+        data = request.json
+        connection = create_server_connection()
+
+        Product_name = data.get('Product_name')
+        Supplier_id = data.get('Supplier_id')
+        price = data.get('price')
+
+        cursor = connection.cursor(dictionary=True)
+
+        insert_query = "INSERT INTO Product (Product_name, Supplier_id, price) VALUES (%s, %s, %s)"
+
+        # Data values to insert
+        data_values = (Product_name, Supplier_id, price)
+
+        # Execute the Query
+        cursor.execute(insert_query, data_values)
+        connection.commit()  # Commit the transaction
+
+        cursor.close()
+        connection.close()
+
+        return "Data inserted successfully"
+    except Exception as e:
+        return str(e)
+
+@app.route('/productby_supplier', methods=['GET'])
 def get_products():
     # Get supplier name parameter from query string
     supplier_name = request.args.get('supplier_name')
@@ -142,4 +187,4 @@ def get_products():
 # Check if the script is executed directly (i.e., not imported)
 if __name__ == '__main__':
     # Run the Flask application on port 7000 with debug mode enabled
-    app.run(debug=True, port=7000)
+    app.run(debug=True, port=5000)
